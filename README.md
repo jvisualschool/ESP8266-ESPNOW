@@ -2,6 +2,13 @@
 
 ESP8266 NodeMCU 2대가 ESP-NOW 프로토콜로 무선 통신하며 SSD1306 OLED에 7가지 인터랙티브 데모를 10초씩 순환 표시하는 프로젝트.
 
+## 스크린샷
+
+![screenshot1](screenshot/screenshot1.png)
+![screenshot2](screenshot/screenshot2.png)
+![screenshot3](screenshot/screenshot3.png)
+![screenshot4](screenshot/screenshot4.png)
+
 ---
 
 ## 목차
