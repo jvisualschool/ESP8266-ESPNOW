@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ESP-NOW 7-in-1 Interactive Demo Preview</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #050507;
+            --card-bg: rgba(20, 20, 25, 0.7);
+            --accent-color: #00a2ff;
+            --accent-light: #4cc2ff;
+            --oled-blue: #00d4ff;
+            --oled-white: #e0faff;
+            --text-main: #ffffff;
+            --text-dim: #94a3b8;
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image:
+                radial-gradient(circle at 20% 20%, rgba(0, 162, 255, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, rgba(0, 212, 255, 0.05) 0%, transparent 40%);
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        header {
+            padding: 40px 20px;
+            text-align: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin-bottom: 10px;
+            background: linear-gradient(to right, #fff, var(--accent-color));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-dim);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        main {
+            flex: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 20px;
+        }
+
+        /* Demo Controls */
+        .controls {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 40px;
+            padding: 10px;
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .demo-btn {
+            padding: 12px 20px;
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-dim);
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            border-radius: 12px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .demo-btn:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .demo-btn.active {
+            background: var(--accent-color);
+            color: white;
+            box-shadow: 0 4px 20px rgba(0, 162, 255, 0.4);
+        }
+
+        /* Displays Area */
+        .preview-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 50px;
+        }
+
+        .device-setup {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 100px;
+            perspective: 1000px;
+        }
+
+        /* ESP-NOW Connection Line */
+        .connection-line {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100px;
+            height: 2px;
+            background: repeating-linear-gradient(90deg, transparent, transparent 5px, var(--accent-color) 5px, var(--accent-color) 10px);
+            opacity: 0.3;
+            z-index: 0;
+        }
+
+        .connection-wave {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--accent-color);
+            border-radius: 50%;
+            opacity: 0;
+            animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+
+        @keyframes ping {
+
+            75%,
+            100% {
+                transform: translate(-50%, -50%) scale(5);
+                opacity: 0;
+            }
+
+            0% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 0.8;
+            }
+        }
+
+        /* NodeMCU & OLED Styled Card */
+        .device {
+            position: relative;
+            width: 340px;
+            background: #1a1a20;
+            border-radius: 24px;
+            padding: 30px;
+            border: 1px solid #333;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+            z-index: 1;
+            transition: transform 0.5s ease;
+        }
+
+        .device:hover {
+            transform: translateY(-5px) rotateX(2deg);
+        }
+
+        .device::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 24px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), transparent);
+            pointer-events: none;
+        }
+
+        .device-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent-color);
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #10b981;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #10b981;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 0.4;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0.4;
+            }
+        }
+
+        /* The OLED Simulation */
+        .oled-screen {
+            width: 384px;
+            /* 128 * 3 */
+            height: 192px;
+            /* 64 * 3 */
+            background-color: #000;
+            border: 6px solid #222;
+            border-radius: 16px;
+            position: relative;
+            overflow: hidden;
+            image-rendering: pixelated;
+            margin: 0 auto;
+            box-shadow: inset 0 0 20px rgba(0, 162, 255, 0.2), 0 0 15px rgba(0, 0, 0, 0.5);
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .screen-reflection {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        /* Demo Description */
+        .demo-info {
+            max-width: 800px;
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border-radius: 24px;
+            padding: 30px;
+            border: 1px solid var(--glass-border);
+            margin-top: 20px;
+        }
+
+        .demo-info h2 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .demo-info p {
+            color: var(--text-dim);
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .tech-tags {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            padding: 6px 14px;
+            background: rgba(0, 162, 255, 0.1);
+            color: var(--accent-light);
+            border-radius: 100px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            border: 1px solid rgba(0, 162, 255, 0.2);
+        }
+
+        footer {
+            padding: 40px;
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 1024px) {
+            .device-setup {
+                flex-direction: column;
+                gap: 40px;
+            }
+
+            .connection-line {
+                width: 2px;
+                height: 40px;
+            }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-color);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #222;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #333;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>ESP-NOW Interactive Preview</h1>
+        <p class="subtitle">두 대의 ESP8266이 ESP-NOW 프로토콜로 실시간 소통하는 인터랙티브 가상 시뮬레이터입니다.</p>
+    </header>
+
+    <main>
+        <div class="controls" id="demoControls">
+            <button class="demo-btn active" onclick="setDemo(0)">0. EYES</button>
+            <button class="demo-btn" onclick="setDemo(1)">1. PING-PONG</button>
+            <button class="demo-btn" onclick="setDemo(2)">2. EMOJI</button>
+            <button class="demo-btn" onclick="setDemo(3)">3. COUNTER</button>
+            <button class="demo-btn" onclick="setDemo(4)">4. SEESAW</button>
+            <button class="demo-btn" onclick="setDemo(5)">5. MORSE</button>
+            <button class="demo-btn" onclick="setDemo(6)">6. SNAKE</button>
+        </div>
+
+        <div class="preview-container">
+            <div class="device-setup">
+                <div class="connection-line"></div>
+                <div class="connection-wave"></div>
+
+                <!-- Device A -->
+                <div class="device" id="deviceA">
+                    <div class="device-label">
+                        <span>HOST: ESP_A</span>
+                        <div class="status-dot"></div>
+                    </div>
+                    <div class="oled-screen">
+                        <canvas id="canvasA" width="384" height="192"></canvas>
+                        <div class="screen-reflection"></div>
+                    </div>
+                </div>
+
+                <!-- Device B -->
+                <div class="device" id="deviceB">
+                    <div class="device-label">
+                        <span>PEER: ESP_B</span>
+                        <div class="status-dot"></div>
+                    </div>
+                    <div class="oled-screen">
+                        <canvas id="canvasB" width="384" height="192"></canvas>
+                        <div class="screen-reflection"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="demo-info" id="demoInfo">
+                <h2 id="demoTitle">0. EYES (눈동자 동기화)</h2>
+                <p id="demoDesc">두 보드의 눈동자가 같은 방향으로 동기화되어 움직입니다. 인코딩된 단일 메시지를 통해 눈의 위치, 상태(깜빡임), 단계를 실시간 전송합니다.</p>
+                <div class="tech-tags">
+                    <span class="tag">UDP-like Protocol</span>
+                    <span class="tag">Real-time Sync</span>
+                    <span class="tag">Integer Encoding</span>
+                    <span class="tag" id="demoPayload">Payload: 6 bytes</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        &copy; 2026 ESP-NOW Interactive System Demo &bull; Built for JVisual School
+    </footer>
+
+    <script>
+        const canvasA = document.getElementById('canvasA');
+        const canvasB = document.getElementById('canvasB');
+        const ctxA = canvasA.getContext('2d');
+        const ctxB = canvasB.getContext('2d');
+
+        // High Resolution Scaling (3x)
+        ctxA.scale(3, 3);
+        ctxB.scale(3, 3);
+
+        let currentDemo = 0;
+        let startTime = Date.now();
+        let demoStartTime = Date.now();
+        const DEMO_DURATION = 10000;
+
+        const demoData = [
+            {
+                title: "0. EYES (눈동자 동기화)",
+                desc: "두 보드의 눈동자가 같은 방향으로 동기화되어 움직입니다. 마스터 보드가 계산한 좌표를 50ms마다 전송하며, 3초 후에는 단일 거대 안구 모드로 전환되어 시각적 재미를 줍니다.",
+                tags: ["Eye Tracking", "Integer Mapping", "Sync Animation"]
+            },
+            {
+                title: "1. PING-PONG (가상 탁구)",
+                desc: "공이 한 화면의 경계를 넘으면 즉시 상대 화면으로 전달됩니다. 공의 Y좌표와 수직 속도를 압축하여 전송하며, 충돌 시마다 왕복 카운트가 증가합니다.",
+                tags: ["Physics Simulation", "Boundary Detection", "State Transfer"]
+            },
+            {
+                title: "2. EMOJI (이모티콘 전송)",
+                desc: "하트, 별, 스마일 아이콘을 번갈아 주고받습니다. 보드가 데이터를 수신하면 사방으로 퍼지는 파동 효과와 함께 아이콘이 팝업됩니다.",
+                tags: ["Bitmap Rendering", "Popup Anim", "Handshake"]
+            },
+            {
+                title: "3. COUNTER (공유 카운터)",
+                desc: "두 장치가 순서대로 공유 변수의 값을 +1씩 올립니다. 하단에는 진행 상태를 보여주는 게이지 바가 있으며, 실시간 숫자 동기화를 시연합니다.",
+                tags: ["Shared State", "Turn-based", "Progress Sync"]
+            },
+            {
+                title: "4. SEESAW (실시간 시소)",
+                desc: "마스터 보드가 생성하는 사인파 기반의 기울기 데이터를 슬레이브가 실시간 반영합니다. 내 보드의 캐릭터는 채워진 형태로 표시되어 구분이 쉽습니다.",
+                tags: ["Sine Wave Math", "Real-time Angle", "Mirroring"]
+            },
+            {
+                title: "5. MORSE (모스 부호 교환)",
+                desc: "SOS와 OK 메시지를 점과 선의 시퀀스로 전송합니다. 전송이 완료되면 제어권이 상대 보드로 넘어가며 텍스트를 그래픽으로 그려나가는 과정을 보여줍니다.",
+                tags: ["Sequence Timing", "Communication Logic", "Drawing Path"]
+            },
+            {
+                title: "6. SNAKE (뱀 화면 이동)",
+                desc: "짧은 뱀이 두 화면 사이를 끊김 없이 이동합니다. 뱀의 머리가 화면 밖으로 나가는 순간 꼬리 세그먼트 위치까지 계산하여 상대 장치로 패킷을 쏘아 올립니다.",
+                tags: ["Trail Effect", "Seamless Transition", "Circular Queue"]
+            }
+        ];
+
+        // State variables for demos
+        const state = {
+            pingPong: { x: 20, y: 32, vx: 2, vy: 1.2, count: 0, screen: 'A', lastSwitch: 0 },
+            emoji: { current: 0, scale: 0, side: 'A', timer: 0, phase: 'waiting' },
+            counter: { val: 0, turn: 'A', timer: 0 },
+            morse: { seq: '...---...', idx: 0, timer: 0, side: 'A', buf: [] },
+            snake: { headX: 30, headY: 32, vy: 0.5, screen: 'A', segments: [] }
+        };
+
+        // Initialize snake
+        for (let i = 0; i < 7; i++) state.snake.segments.push({ x: 30 - i * 6, y: 32 });
+
+        function setDemo(idx) {
+            currentDemo = idx;
+            demoStartTime = Date.now();
+
+            // Update UI
+            const btns = document.querySelectorAll('.demo-btn');
+            btns.forEach((b, i) => b.classList.toggle('active', i === idx));
+
+            document.getElementById('demoTitle').innerText = demoData[idx].title;
+            document.getElementById('demoDesc').innerText = demoData[idx].desc;
+
+            const tagContainer = document.querySelector('.tech-tags');
+            const defaultTags = `<span class="tag" id="demoPayload">Payload: 6 bytes</span>`;
+            tagContainer.innerHTML = demoData[idx].tags.map(t => `<span class="tag">${t}</span>`).join('') + defaultTags;
+
+            // Reset relative demo states
+            if (idx === 1) { state.pingPong.x = 20; state.pingPong.screen = 'A'; state.pingPong.count = 0; }
+            if (idx === 2) { state.emoji.timer = Date.now(); state.emoji.side = 'A'; state.emoji.phase = 'sending'; }
+            if (idx === 3) { state.counter.val = 0; state.counter.turn = 'A'; state.counter.timer = Date.now(); }
+            if (idx === 5) { state.morse.idx = 0; state.morse.side = 'A'; state.morse.buf = []; state.morse.timer = Date.now(); }
+            if (idx === 6) { state.snake.headX = 20; state.snake.screen = 'A'; }
+        }
+
+        function drawHeader(ctx, name, demoName, timeRatio) {
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0, 0, 128, 10);
+            ctx.fillStyle = '#000';
+            ctx.font = '6px "JetBrains Mono"';
+            ctx.fillText(name, 2, 7);
+            ctx.fillText(demoName, 44, 7);
+
+            // Time bar
+            ctx.fillStyle = '#fff';
+            ctx.drawRect
+            ctx.fillRect(0, 10, 128 * timeRatio, 2);
+        }
+
+        // --- Bitmaps ---
+        const bitmaps = {
+            heart: [0x00, 0x00, 0x36, 0x6C, 0x7F, 0xFE, 0x7F, 0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x7F, 0xFE, 0x3F, 0xFC, 0x1F, 0xF8, 0x0F, 0xF0, 0x07, 0xE0, 0x03, 0xC0, 0x01, 0x80, 0x00, 0x00],
+            star: [0x00, 0x00, 0x01, 0x80, 0x01, 0x80, 0x03, 0xC0, 0x03, 0xC0, 0xFF, 0xFF, 0x7F, 0xFE, 0x1F, 0xF8, 0x0F, 0xF0, 0x0F, 0xF0, 0x1F, 0xF8, 0x39, 0x9C, 0x71, 0x8E, 0x61, 0x86, 0x01, 0x80, 0x00, 0x00],
+            smile: [0x07, 0xE0, 0x18, 0x18, 0x20, 0x04, 0x40, 0x02, 0x4C, 0x32, 0x4C, 0x32, 0x40, 0x02, 0x40, 0x02, 0x40, 0x02, 0x42, 0x42, 0x41, 0x82, 0x20, 0x04, 0x18, 0x18, 0x07, 0xE0, 0x00, 0x00, 0x00, 0x00]
+        };
+
+        function drawBitmap(ctx, x, y, data, size = 16, color = '#fff') {
+            ctx.fillStyle = color;
+            for (let row = 0; row < 16; row++) {
+                let byte1 = data[row * 2];
+                let byte2 = data[row * 2 + 1];
+                for (let bit = 0; bit < 8; bit++) {
+                    if ((byte1 >> (7 - bit)) & 1) ctx.fillRect(x + bit, y + row, 1, 1);
+                    if ((byte2 >> (7 - bit)) & 1) ctx.fillRect(x + 8 + bit, y + row, 1, 1);
+                }
+            }
+        }
+
+        function render() {
+            const now = Date.now();
+            const elapsed = (now - demoStartTime) % DEMO_DURATION;
+            const timeRatio = 1 - (elapsed / DEMO_DURATION);
+
+            // Auto cycle demo
+            if (now - demoStartTime >= DEMO_DURATION) {
+                setDemo((currentDemo + 1) % 7);
+            }
+
+            // Clear
+            ctxA.fillStyle = '#000'; ctxA.fillRect(0, 0, 128, 64);
+            ctxB.fillStyle = '#000'; ctxB.fillRect(0, 0, 128, 64);
+
+            const demoNameList = ["EYES", "PING-PONG", "EMOJI", "COUNTER", "SEESAW", "MORSE", "SNAKE"];
+            drawHeader(ctxA, "ESP_A", demoNameList[currentDemo], timeRatio);
+            drawHeader(ctxB, "ESP_B", demoNameList[currentDemo], timeRatio);
+
+            // --- Demo Logic Rendering ---
+            if (currentDemo === 0) { // EYES
+                const t = now / 1500;
+                const ox = Math.sin(t) * 8;
+                const oy = Math.cos(t * 1.3) * 4;
+                const phase = elapsed < 3000 ? 0 : 1;
+                const blink = (now % 2500 < 180);
+
+                const drawEye = (ctx, cx, cy, er, pr) => {
+                    if (!blink) {
+                        ctx.strokeStyle = '#fff';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath(); ctx.arc(cx, cy, er, 0, Math.PI * 2); ctx.stroke();
+                        ctx.beginPath(); ctx.arc(cx, cy, er - 1, 0, Math.PI * 2); ctx.stroke();
+                        ctx.fillStyle = '#fff';
+                        ctx.beginPath(); ctx.arc(cx + ox, cy + oy, pr, 0, Math.PI * 2); ctx.fill();
+                    } else {
+                        ctx.strokeStyle = '#fff';
+                        ctx.beginPath();
+                        ctx.moveTo(cx - er + 3, cy); ctx.lineTo(cx, cy - er / 3); ctx.lineTo(cx + er - 3, cy);
+                        ctx.moveTo(cx - er + 3, cy); ctx.lineTo(cx, cy + er / 3); ctx.lineTo(cx + er - 3, cy);
+                        ctx.stroke();
+                    }
+                };
+
+                if (phase === 0) {
+                    drawEye(ctxA, 32, 38, 16, 7); drawEye(ctxA, 96, 38, 16, 7);
+                    drawEye(ctxB, 32, 38, 16, 7); drawEye(ctxB, 96, 38, 16, 7);
+                } else {
+                    drawEye(ctxA, 64, 38, 24, 11); drawEye(ctxB, 64, 38, 24, 11);
+                }
+            }
+            else if (currentDemo === 1) { // PING-PONG
+                const p = state.pingPong;
+                p.x += p.vx; p.y += p.vy;
+                if (p.y < 16 || p.y > 58) p.vy *= -1;
+
+                if (p.x > 132) {
+                    p.x = -4; p.screen = p.screen === 'A' ? 'B' : 'A';
+                    p.count++;
+                    p.lastSwitch = now;
+                }
+
+                const activeCtx = p.screen === 'A' ? ctxA : ctxB;
+                activeCtx.fillStyle = '#fff';
+                activeCtx.beginPath(); activeCtx.arc(p.x, p.y, 4, 0, Math.PI * 2); activeCtx.fill();
+
+                // Status text
+                if (now - p.lastSwitch < 1000) {
+                    activeCtx.font = '8px "Inter"';
+                    activeCtx.fillText(">>> RECV", 10, 32);
+                }
+
+                ctxA.fillStyle = '#fff'; ctxA.fillText(`#${p.count}`, 100, 58);
+                ctxB.fillStyle = '#fff'; ctxB.fillText(`#${p.count}`, 100, 58);
+            }
+            else if (currentDemo === 2) { // EMOJI
+                const e = state.emoji;
+                const diff = now - e.timer;
+                const iconBmps = [bitmaps.heart, bitmaps.star, bitmaps.smile];
+
+                if (e.phase === 'sending') {
+                    const s = Math.max(0, 1 - (diff / 500));
+                    const ctx = e.side === 'A' ? ctxA : ctxB;
+                    const size = 16 * s;
+                    if (size > 0) drawBitmap(ctx, 64 - size / 2, 36 - size / 2, iconBmps[e.current]);
+                    if (diff > 500) { e.phase = 'receiving'; e.timer = now; e.side = e.side === 'A' ? 'B' : 'A'; }
+                } else {
+                    const s = Math.min(1, diff / 500);
+                    const ctx = e.side === 'A' ? ctxA : ctxB;
+                    drawBitmap(ctx, 64 - 8, 36 - 8, iconBmps[e.current]);
+                    if (s < 1) {
+                        ctx.strokeStyle = '#fff';
+                        ctx.beginPath(); ctx.arc(64, 36, 20 * s, 0, Math.PI * 2); ctx.stroke();
+                    }
+                    if (diff > 1500) { e.phase = 'sending'; e.timer = now; e.current = (e.current + 1) % 3; }
+                }
+            }
+            else if (currentDemo === 3) { // COUNTER
+                const c = state.counter;
+                if (now - c.timer > 800) {
+                    c.val++; c.turn = c.turn === 'A' ? 'B' : 'A'; c.timer = now;
+                }
+                const drawC = (ctx, isTurn) => {
+                    ctx.fillStyle = '#fff';
+                    ctx.font = '20px "JetBrains Mono"';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(c.val, 64, 40);
+                    ctx.font = '6px "Inter"';
+                    ctx.fillText(isTurn ? "MY TURN" : "WAITING...", 64, 55);
+                    ctx.strokeRect(4, 58, 120, 4);
+                    ctx.fillRect(4, 58, (c.val % 50) * 2.4, 4);
+                    ctx.textAlign = 'left';
+                };
+                drawC(ctxA, c.turn === 'A'); drawC(ctxB, c.turn === 'B');
+            }
+            else if (currentDemo === 4) { // SEESAW
+                const off = Math.sin(now / 1400) * 12;
+                const drawS = (ctx, isA) => {
+                    // Fulcrum
+                    ctx.strokeStyle = '#fff';
+                    ctx.beginPath(); ctx.moveTo(60, 62); ctx.lineTo(64, 54); ctx.lineTo(68, 62); ctx.closePath(); ctx.stroke();
+                    // Plank
+                    ctx.beginPath(); ctx.moveTo(10, 46 + off); ctx.lineTo(118, 46 - off); ctx.stroke();
+                    // Blocks
+                    if (isA) ctx.fillRect(10, 38 + off, 8, 8); else ctx.strokeRect(10, 38 + off, 8, 8);
+                    if (!isA) ctx.fillRect(110, 38 - off, 8, 8); else ctx.strokeRect(110, 38 - off, 8, 8);
+                };
+                drawS(ctxA, true); drawS(ctxB, false);
+            }
+            else if (currentDemo === 5) { // MORSE
+                const m = state.morse;
+                const charSeq = m.side === 'A' ? '...---...' : '---.-.'; // SOS / OK
+                if (now - m.timer > 300) {
+                    if (m.idx < charSeq.length) {
+                        m.buf.push(charSeq[m.idx++]);
+                    } else {
+                        m.idx = 0; m.buf = []; m.side = m.side === 'A' ? 'B' : 'A';
+                    }
+                    m.timer = now;
+                }
+                const drawM = (ctx, active) => {
+                    ctx.fillStyle = '#fff'; ctx.font = '7px "Inter"';
+                    ctx.fillText(active ? "TX >>" : "RX <<", 5, 20);
+                    let x = 10;
+                    m.buf.forEach(s => {
+                        if (s === '.') { ctx.beginPath(); ctx.arc(x + 2, 40, 2, 0, Math.PI * 2); ctx.fill(); x += 8; }
+                        else { ctx.fillRect(x, 38, 10, 4); x += 14; }
+                    });
+                    if (active && (now % 400 < 200)) ctx.fillRect(x, 36, 1, 8);
+                };
+                drawM(ctxA, m.side === 'A'); drawM(ctxB, m.side === 'B');
+            }
+            else if (currentDemo === 6) { // SNAKE
+                const s = state.snake;
+                s.headX += 2; s.headY += s.vy;
+                if (s.headY < 15 || s.headY > 60) s.vy *= -1;
+
+                if (s.headX > 136) { s.headX = -10; s.screen = s.screen === 'A' ? 'B' : 'A'; }
+
+                s.segments.unshift({ x: s.headX, y: s.headY });
+                if (s.segments.length > 7) s.segments.pop();
+
+                const activeCtx = s.screen === 'A' ? ctxA : ctxB;
+                s.segments.forEach((seg, i) => {
+                    const r = Math.max(1, 4 - i / 2);
+                    activeCtx.fillStyle = '#fff';
+                    activeCtx.beginPath(); activeCtx.arc(seg.x, seg.y, r, 0, Math.PI * 2); activeCtx.fill();
+                });
+                const otherCtx = s.screen === 'A' ? ctxB : ctxA;
+                otherCtx.fillStyle = '#444'; otherCtx.font = '6px "Inter"';
+                otherCtx.fillText("WAITING FOR SNAKE...", 30, 35);
+            }
+
+            requestAnimationFrame(render);
+        }
+
+        render();
+    </script>
+
+</body>
+
+</html>
