@@ -7,7 +7,7 @@ ESP8266 NodeMCU 2대가 ESP-NOW 프로토콜로 무선 통신하며 SSD1306 OLED
 ![screenshot1](screenshot/screenshot1.webp)
 ![screenshot2](screenshot/screenshot2.webp)
 ![screenshot3](screenshot/screenshot3.webp)
-![screenshot4](screenshot/Add_connected_USB-C_cables_to_both_development_boa-1771851829838.png)
+
 
 ---
 
