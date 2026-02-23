@@ -173,14 +173,21 @@
         /* NodeMCU & OLED Styled Card */
         .device {
             position: relative;
-            width: 340px;
+            width: 380px;
+            height: 260px;
             background: #1a1a20;
             border-radius: 24px;
             padding: 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
             border: 1px solid #333;
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
             z-index: 1;
             transition: transform 0.5s ease;
+            margin-top: 40px;
+            /* Space for scale overflow */
+            margin-bottom: 40px;
         }
 
         .device:hover {
@@ -236,24 +243,25 @@
 
         /* The OLED Simulation */
         .oled-screen {
-            width: 384px;
-            /* 128 * 3 */
-            height: 192px;
-            /* 64 * 3 */
+            width: 128px;
+            height: 64px;
             background-color: #000;
-            border: 6px solid #222;
-            border-radius: 16px;
+            border: 2px solid #222;
+            border-radius: 4px;
             position: relative;
             overflow: hidden;
             image-rendering: pixelated;
             margin: 0 auto;
-            box-shadow: inset 0 0 20px rgba(0, 162, 255, 0.2), 0 0 15px rgba(0, 0, 0, 0.5);
+            box-shadow: inset 0 0 10px rgba(0, 162, 255, 0.2), 0 0 10px rgba(0, 0, 0, 0.5);
+            /* Scale using transform to keep pixel perfect look while making it visible */
+            transform: scale(2.5);
+            transform-origin: center;
         }
 
         canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
+            width: 128px;
+            height: 64px;
+            image-rendering: pixelated;
         }
 
         .screen-reflection {
@@ -376,7 +384,7 @@
                         <div class="status-dot"></div>
                     </div>
                     <div class="oled-screen">
-                        <canvas id="canvasA" width="384" height="192"></canvas>
+                        <canvas id="canvasA" width="128" height="64"></canvas>
                         <div class="screen-reflection"></div>
                     </div>
                 </div>
@@ -388,7 +396,7 @@
                         <div class="status-dot"></div>
                     </div>
                     <div class="oled-screen">
-                        <canvas id="canvasB" width="384" height="192"></canvas>
+                        <canvas id="canvasB" width="128" height="64"></canvas>
                         <div class="screen-reflection"></div>
                     </div>
                 </div>
@@ -417,9 +425,8 @@
         const ctxA = canvasA.getContext('2d');
         const ctxB = canvasB.getContext('2d');
 
-        // High Resolution Scaling (3x)
-        ctxA.scale(3, 3);
-        ctxB.scale(3, 3);
+        // High Resolution Rendering (Native 128x64)
+        // No ctx.scale needed because CSS transform handles visual scaling
 
         let currentDemo = 0;
         let startTime = Date.now();
